@@ -21,8 +21,8 @@ def test_scan_detects_yaml_in_skills(tmp_path):
     write_file(bad_skill, "import yaml\nopen('rules.yaml')\n")
 
     backend_agent = tmp_path / "backend" / "app" / "agents" / "bad_agent.py"
-    # create a class Agent with >80 lines
-    lines = ["class BadAgent:\n"] + ["    def line(self):\n        pass\n" for _ in range(100)]
+    # create a class Agent with >80 lines and an import from skills
+    lines = ["from skills.some_skill import helper\n", "class BadAgent:\n"] + ["    def line(self):\n        pass\n" for _ in range(100)]
     write_file(backend_agent, "\n".join(lines))
 
     mgr = IdentityManager()
@@ -31,3 +31,4 @@ def test_scan_detects_yaml_in_skills(tmp_path):
     assert any(str(bad_skill) in p for p in violations["yaml_in_skills"])
     assert any(str(bad_skill) in p for p in violations["file_open_in_skills"])
     assert any(str(backend_agent) in p for p in violations["agents_with_large_classes"])
+    assert any(str(backend_agent) in p for p in violations["imports_from_skills_in_agents"])

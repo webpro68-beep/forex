@@ -69,6 +69,7 @@ class IdentityManager:
             "file_open_in_skills": [],
             "agents_with_large_classes": [],
             "files_reading_yaml_anywhere": [],
+            "imports_from_skills_in_agents": [],
         }
 
         # 1) Scan skills for yaml imports or opening yaml files
@@ -82,7 +83,7 @@ class IdentityManager:
                 lowered = text.lower()
                 if "import yaml" in lowered or "pyyaml" in lowered or "from yaml" in lowered:
                     violations["yaml_in_skills"].append(str(path))
-                if "'.yaml'" in text or '".yaml"' in text or ".yaml" in text and "open(" in text:
+                if "open(" in text and (".yaml" in text or "'rules.yaml'" in text or '"rules.yaml"' in text or "'.yaml'" in text or '".yaml"' in text):
                     # crude check for opening yaml files
                     violations["file_open_in_skills"].append(str(path))
 
@@ -116,5 +117,9 @@ class IdentityManager:
                         length += 1
                     if length > 80:
                         violations["agents_with_large_classes"].append(str(path))
+
+                # detect imports from skills.* inside backend agent files
+                if "from skills." in text or "import skills." in text:
+                    violations["imports_from_skills_in_agents"].append(str(path))
 
         return violations
