@@ -15,6 +15,7 @@ from governance.governance_manager import GovernanceManager
 from hooks.hook_manager import HookManager
 from memory.memory_manager import MemoryManager
 from skills.shared.memory import list_winner_genes, promote_gene, remember_gene
+from identity.identity_manager import IdentityManager
 
 settings = get_settings()
 
@@ -45,6 +46,7 @@ genes_memory = WinnerGenesMemoryAgent(gene_store)
 memory_agent = MemoryManager(settings.memory_path)
 governance_agent = GovernanceManager()
 evolution_agent = HookManager()
+identity_agent = IdentityManager()
 
 
 def get_or_create_robot_state() -> RobotState:
