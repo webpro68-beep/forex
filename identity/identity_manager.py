@@ -57,3 +57,64 @@ class IdentityManager:
             return float(value)
         except ValueError:
             return value
+
+    def scan_for_violations(self, base_path: str | Path) -> Dict[str, list[str]]:
+        """Scan the codebase for simple policy violations.
+
+        Returns a dict with lists of file paths for each violation type.
+        """
+        base = Path(base_path)
+        violations: Dict[str, list[str]] = {
+            "yaml_in_skills": [],
+            "file_open_in_skills": [],
+            "agents_with_large_classes": [],
+            "files_reading_yaml_anywhere": [],
+        }
+
+        # 1) Scan skills for yaml imports or opening yaml files
+        skills_dir = base / "skills"
+        if skills_dir.exists():
+            for path in skills_dir.rglob("*.py"):
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except Exception:
+                    continue
+                lowered = text.lower()
+                if "import yaml" in lowered or "pyyaml" in lowered or "from yaml" in lowered:
+                    violations["yaml_in_skills"].append(str(path))
+                if "'.yaml'" in text or '".yaml"' in text or ".yaml" in text and "open(" in text:
+                    # crude check for opening yaml files
+                    violations["file_open_in_skills"].append(str(path))
+
+        # 2) Scan whole repo for files reading .yaml anywhere
+        for path in base.rglob("*.py"):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            if ".yaml" in text and ("open(" in text or "path(" in text.lower() or "read_text(" in text):
+                violations["files_reading_yaml_anywhere"].append(str(path))
+
+        # 3) Scan backend agents for large Agent classes (possible business logic)
+        backend_dir = base / "backend"
+        if backend_dir.exists():
+            for path in (backend_dir / "app").rglob("*.py"):
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except Exception:
+                    continue
+                # find class declarations ending with Agent
+                import re
+                for m in re.finditer(r"class\s+(\w+Agent)\b", text):
+                    start = m.start()
+                    # estimate class length by lines until next class or EOF
+                    lines_after = text[start:].splitlines()
+                    length = 0
+                    for ln in lines_after[1:]:
+                        if ln.startswith("class "):
+                            break
+                        length += 1
+                    if length > 80:
+                        violations["agents_with_large_classes"].append(str(path))
+
+        return violations
