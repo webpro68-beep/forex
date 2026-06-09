@@ -7,9 +7,9 @@ MVP robot hedging operating system theo kiến trúc Agent + FSM + Risk Guard + 
 A new `skills/` package has been added to support modular strategy building and analysis.
 
 Package structure:
-- `skills/market-analysis` — market trend, support/resistance, liquidity analysis.
-- `skills/signal-engine` — signal generation for EMA crossovers, breakouts, and structure breaks.
-- `skills/risk-management` — position sizing, stop loss, take profit, and risk/reward tools.
+- `skills/market_analysis` — market trend, support/resistance, liquidity analysis.
+- `skills/signal_engine` — signal generation for EMA crossovers, breakouts, and structure breaks.
+- `skills/risk_management` — position sizing, stop loss, take profit, and risk/reward tools.
 - `skills/execution` — order payload builders for open, close, and modify operations.
 - `skills/journal` — trade journaling, statistics, and export helpers.
 - `skills/backtesting` — lightweight backtesting routines and performance metrics.
@@ -17,8 +17,8 @@ Package structure:
 
 Example usage:
 
-- `skills/market-analysis/trend.py`
-- `skills/signal-engine/ema_cross.py`
+- `skills/market_analysis/trend.py`
+- `skills/signal_engine/ema_cross.py`
 
 ## Chạy nhanh
 
