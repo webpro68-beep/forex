@@ -11,6 +11,7 @@ from app.guard.risk_guard import RiskGuardAgent
 from app.market.mock_market import MockMarketDataAgent
 from app.optimization.gene_search import BacktestOptimizationAgent
 from app.strategy.hedge_engine import HedgeEngine
+from governance.governance_manager import GovernanceManager
 from memory.memory_manager import MemoryManager
 from skills.shared.memory import list_winner_genes, promote_gene, remember_gene
 
@@ -41,6 +42,7 @@ execution_agent = ExecutionAdapterAgent(settings)
 optimizer = BacktestOptimizationAgent()
 genes_memory = WinnerGenesMemoryAgent(gene_store)
 memory_agent = MemoryManager(settings.memory_path)
+governance_agent = GovernanceManager()
 
 
 def get_or_create_robot_state() -> RobotState:
