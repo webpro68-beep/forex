@@ -21,6 +21,8 @@ Package structure:
 The backend exposes a memory API for saving and querying memory records.
 - `POST /api/v1/memory/save` — save a generic memory entry.
 - `POST /api/v1/memory/save-trade-context` — save a structured trade context record.
+- `POST /api/v1/memory/short-term/save` — save short-term memory entries.
+- `GET /api/v1/memory/short-term/recent` — retrieve recent short-term memories.
 - `POST /api/v1/memory/query` — query memory by text and tags.
 - `POST /api/v1/memory/market-insight` — query long-term market insight records.
 - `GET /api/v1/memory/all` — list all saved memory records.

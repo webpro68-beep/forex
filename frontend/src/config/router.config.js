@@ -87,6 +87,13 @@ export const asyncRouterMap = [
         component: () => import('@/views/trading-bot'),
         meta: { title: 'menu.dashboard.tradingBot', keepAlive: true, icon: 'robot', permission: ['dashboard'] }
       },
+      {
+        path: '/memory',
+        name: 'Memory',
+        component: () => import('@/views/memory'),
+        hidden: true,
+        meta: { title: 'menu.memory', keepAlive: true, icon: 'database', permission: ['dashboard'] }
+      },
       // 8. 券商账户
       {
         path: '/broker-accounts',

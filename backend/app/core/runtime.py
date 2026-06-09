@@ -12,6 +12,7 @@ from app.market.mock_market import MockMarketDataAgent
 from app.memory.trading_memory import MemoryOsAgent, WinnerGenesMemoryAgent
 from app.optimization.gene_search import BacktestOptimizationAgent
 from app.strategy.hedge_engine import HedgeEngine
+from skills.memory.short_term import MemoryStore
 
 settings = get_settings()
 state_store = JsonStateStore(settings.storage_path)
@@ -23,6 +24,7 @@ hedge_engine = HedgeEngine(settings.base_lot, settings.max_exposure_lots)
 execution_agent = ExecutionAdapterAgent(settings)
 optimizer = BacktestOptimizationAgent()
 genes_memory = WinnerGenesMemoryAgent(gene_store)
+short_memory = MemoryStore()
 memory_agent = MemoryOsAgent(settings.memory_path)
 
 

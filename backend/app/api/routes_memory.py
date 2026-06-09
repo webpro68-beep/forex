@@ -5,8 +5,9 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from app.core.runtime import memory_agent
+from app.core.runtime import memory_agent, short_memory
 from skills.memory.schemas import MemoryQuery, MemoryType
+from skills.memory.short_term import add_short_term_memory, recall_recent_memories
 from skills.memory.workflows import query_market_insight, save_trade_context
 
 router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
@@ -30,6 +31,11 @@ class MemoryQueryRequest(BaseModel):
     query: str
     tags: list[str] = Field(default_factory=list)
     memory_type: MemoryType | None = None
+
+
+class ShortTermMemoryRequest(BaseModel):
+    content: dict[str, Any] = Field(default_factory=dict)
+    tags: list[str] = Field(default_factory=list)
 
 
 @router.post("/save")
@@ -65,6 +71,18 @@ def query_memory(payload: MemoryQueryRequest):
 def get_all_memory():
     records = memory_agent.all()
     return {"records": [record.to_dict() for record in records]}
+
+
+@router.post("/short-term/save")
+def save_short_term_memory(payload: ShortTermMemoryRequest):
+    record = add_short_term_memory(short_memory, payload.content, payload.tags)
+    return {"saved_memory": record.to_dict()}
+
+
+@router.get("/short-term/recent")
+def recent_short_term_memory(limit: int = 10):
+    records = recall_recent_memories(short_memory, limit)
+    return {"recent_memories": [record.to_dict() for record in records]}
 
 
 @router.post("/market-insight")
