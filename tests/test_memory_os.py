@@ -10,8 +10,8 @@ sys.path.insert(0, str(ROOT / "backend"))
 from app.main import app
 from app.api import routes_memory
 from app.core.runtime import MemoryOsAgent, MemoryStore
-from skills.memory.long_term import query_memory, MemoryQuery
-from skills.memory.schemas import MemoryType
+from memory.long_term import query_memory, MemoryQuery
+from memory.schemas import MemoryType
 
 
 def test_query_memory_matches_content_and_tags(tmp_path):

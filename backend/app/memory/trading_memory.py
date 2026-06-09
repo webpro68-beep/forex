@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from app.core.models import WinnerGene
 from app.core.state_store import GeneStore
-from skills.memory.long_term import MemoryQuery, MemoryRecord, MemoryType, load_memory, persist_memory, query_memory
+from memory.long_term import MemoryQuery, MemoryRecord, MemoryType, load_memory, persist_memory, query_memory
 from skills.shared.memory import list_winner_genes, promote_gene, remember_gene
 
 

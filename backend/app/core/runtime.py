@@ -12,7 +12,7 @@ from app.market.mock_market import MockMarketDataAgent
 from app.memory.trading_memory import MemoryOsAgent, WinnerGenesMemoryAgent
 from app.optimization.gene_search import BacktestOptimizationAgent
 from app.strategy.hedge_engine import HedgeEngine
-from skills.memory.short_term import MemoryStore
+from memory.short_term import MemoryStore
 
 settings = get_settings()
 state_store = JsonStateStore(settings.storage_path)

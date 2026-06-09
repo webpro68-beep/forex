@@ -6,9 +6,9 @@ from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
 from app.core.runtime import memory_agent, short_memory
-from skills.memory.schemas import MemoryQuery, MemoryType
-from skills.memory.short_term import add_short_term_memory, recall_recent_memories
-from skills.memory.workflows import query_market_insight, save_trade_context
+from memory.schemas import MemoryQuery, MemoryType
+from memory.short_term import add_short_term_memory, recall_recent_memories
+from memory.workflows import query_market_insight, save_trade_context
 
 router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
 
