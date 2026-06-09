@@ -1,16 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import APIRouter, Query
 from typing import Optional
 
+from app.core.config import get_settings
 from enterprise_graph import EnterpriseGraphManager
 
+settings = get_settings()
 router = APIRouter(prefix="/api/v1/graph", tags=["enterprise_graph"])
 
 # in-memory singleton for simple usage
 graph_agent = EnterpriseGraphManager()
 
-DEFAULT_STORE_PATH = "data/enterprise_graph.json"
+DEFAULT_STORE_PATH = settings.graph_path
 
 
 @router.get("/status")
@@ -33,6 +37,13 @@ def add_edge(src: str, dst: str):
 @router.get("/dump")
 def dump_graph():
     return graph_agent.get_graph()
+
+
+@router.post("/populate")
+def populate_graph(skills_root: Optional[str] = Query("skills")):
+    graph_agent.clear()
+    graph_agent.populate_from_skills(skills_root)
+    return {"ok": True, "nodes": len(graph_agent.nodes), "skills_root": skills_root}
 
 
 @router.post("/save")

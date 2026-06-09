@@ -39,6 +39,26 @@ class EnterpriseGraphManager:
         self.nodes = data.get("nodes", {})
         self.edges = data.get("edges", [])
 
+    def populate_from_skills(self, base_path: str | Path) -> None:
+        base = Path(base_path)
+        if not base.exists() or not base.is_dir():
+            return
+
+        for child in sorted(base.iterdir()):
+            if not child.is_dir():
+                continue
+            if not (child / "__init__.py").exists():
+                continue
+            node_id = child.name
+            meta: Dict[str, Any] = {"category": "skill"}
+            readme_file = child / "README.md"
+            if readme_file.exists():
+                text = readme_file.read_text(encoding="utf-8")
+                first_line = next((line.strip() for line in text.splitlines() if line.strip()), "")
+                if first_line:
+                    meta["description"] = first_line.lstrip("# ")
+            self.register_node(node_id, meta)
+
     def get_subgraph(self, node_id: str | None = None, category: str | None = None) -> Dict[str, Any]:
         """Return a subgraph filtered by node or category.
 

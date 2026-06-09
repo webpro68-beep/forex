@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     genes_path: str = "./winner_genes.json"
     memory_path: str = "./memory_store.json"
     logs_path: str = "./execution_logs.jsonl"
+    graph_path: str = "./data/enterprise_graph.json"
 
     max_drawdown_pct: float = 10.0
     equity_guard_pct: float = 5.0
