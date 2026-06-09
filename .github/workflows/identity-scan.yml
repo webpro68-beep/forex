@@ -31,7 +31,7 @@ jobs:
               sys.exit(0)
           j = json.load(open(p))
           # define critical keys
-          critical_keys = ['imports_from_skills_in_agents','yaml_in_skills']
+          critical_keys = ['imports_from_skills_in_agents','yaml_in_skills','my_new_key']
           critical_found = any(len(j.get(k,[]))>0 for k in critical_keys)
           # write outputs
           print(f"critical={str(critical_found).lower()}")
