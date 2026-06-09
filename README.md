@@ -13,6 +13,7 @@ Package structure:
 - `skills/execution` — order payload builders for open, close, and modify operations.
 - `skills/journal` — trade journaling, statistics, and export helpers.
 - `skills/backtesting` — lightweight backtesting routines and performance metrics.
+- `skills/memory` — short-term and long-term memory operating system primitives.
 - `skills/shared` — shared models, constants, enums, exceptions, and utilities.
 
 Example usage:

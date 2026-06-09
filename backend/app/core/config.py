@@ -24,6 +24,7 @@ class Settings(BaseSettings):
 
     storage_path: str = "./runtime_state.json"
     genes_path: str = "./winner_genes.json"
+    memory_path: str = "./memory_store.json"
     logs_path: str = "./execution_logs.jsonl"
 
     max_drawdown_pct: float = 10.0
