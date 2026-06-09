@@ -4,17 +4,33 @@ from datetime import datetime, timezone
 
 from app.brain.fsm import FsmBrainAgent
 from app.core.config import get_settings
-from app.core.models import FsmState, RobotState, RobotStatus
+from app.core.models import FsmState, RobotState, RobotStatus, WinnerGene
 from app.core.state_store import GeneStore, JsonStateStore
 from app.execution.order_router import ExecutionAdapterAgent
 from app.guard.risk_guard import RiskGuardAgent
 from app.market.mock_market import MockMarketDataAgent
-from app.memory.trading_memory import MemoryOsAgent, WinnerGenesMemoryAgent
 from app.optimization.gene_search import BacktestOptimizationAgent
 from app.strategy.hedge_engine import HedgeEngine
-from memory.short_term import MemoryStore
+from memory.memory_manager import MemoryManager
+from skills.shared.memory import list_winner_genes, promote_gene, remember_gene
 
 settings = get_settings()
+
+
+class WinnerGenesMemoryAgent:
+    def __init__(self, store: GeneStore):
+        self.store = store
+
+    def remember(self, gene: WinnerGene) -> WinnerGene:
+        return remember_gene(self.store, gene)
+
+    def winners(self) -> list[WinnerGene]:
+        return list_winner_genes(self.store)
+
+    def promote(self, symbol: str, timeframe: str) -> WinnerGene | None:
+        return promote_gene(self.store, symbol, timeframe)
+
+
 state_store = JsonStateStore(settings.storage_path)
 gene_store = GeneStore(settings.genes_path)
 market_agent = MockMarketDataAgent()
@@ -24,8 +40,7 @@ hedge_engine = HedgeEngine(settings.base_lot, settings.max_exposure_lots)
 execution_agent = ExecutionAdapterAgent(settings)
 optimizer = BacktestOptimizationAgent()
 genes_memory = WinnerGenesMemoryAgent(gene_store)
-short_memory = MemoryStore()
-memory_agent = MemoryOsAgent(settings.memory_path)
+memory_agent = MemoryManager(settings.memory_path)
 
 
 def get_or_create_robot_state() -> RobotState:

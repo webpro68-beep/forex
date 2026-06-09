@@ -9,20 +9,20 @@ sys.path.insert(0, str(ROOT / "backend"))
 
 from app.main import app
 from app.api import routes_memory
-from app.core.runtime import MemoryOsAgent, MemoryStore
-from memory.long_term import query_memory, MemoryQuery
-from memory.schemas import MemoryType
+from app.core.runtime import memory_agent
+from memory.memory_manager import MemoryManager
+from memory.schemas import MemoryQuery, MemoryType
 
 
 def test_query_memory_matches_content_and_tags(tmp_path):
     store_path = tmp_path / "memory_store.json"
-    agent = MemoryOsAgent(str(store_path))
+    agent = MemoryManager(str(store_path))
 
     agent.remember({"message": "Market looks bullish"}, memory_type=MemoryType.LONG_TERM, tags=["insight"])
     agent.remember({"message": "Market looks bearish"}, memory_type=MemoryType.LONG_TERM, tags=["alert"])
 
     query = MemoryQuery(query="bullish", tags=["insight"], memory_type=MemoryType.LONG_TERM)
-    results = query_memory(str(store_path), query)
+    results = agent.query(query.query, tags=query.tags, memory_type=query.memory_type)
 
     assert len(results) == 1
     assert results[0].content["message"] == "Market looks bullish"
@@ -30,8 +30,7 @@ def test_query_memory_matches_content_and_tags(tmp_path):
 
 
 def test_memory_api_short_term_endpoints_and_long_term_query(tmp_path):
-    routes_memory.memory_agent = MemoryOsAgent(str(tmp_path / "memory_store.json"))
-    routes_memory.short_memory = MemoryStore()
+    routes_memory.memory_agent = MemoryManager(str(tmp_path / "memory_store.json"))
     client = TestClient(app)
 
     save_resp = client.post(

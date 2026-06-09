@@ -5,10 +5,8 @@ from typing import Any
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
 
-from app.core.runtime import memory_agent, short_memory
+from app.core.runtime import memory_agent
 from memory.schemas import MemoryQuery, MemoryType
-from memory.short_term import add_short_term_memory, recall_recent_memories
-from memory.workflows import query_market_insight, save_trade_context
 
 router = APIRouter(prefix="/api/v1/memory", tags=["memory"])
 
@@ -50,8 +48,7 @@ def save_memory(record: MemorySaveRequest):
 
 @router.post("/save-trade-context")
 def save_trade_context_endpoint(payload: TradeContextRequest):
-    saved = save_trade_context(
-        memory_agent,
+    saved = memory_agent.save_trade_context(
         symbol=payload.symbol,
         timeframe=payload.timeframe,
         trade_context=payload.trade_context,
@@ -62,30 +59,33 @@ def save_trade_context_endpoint(payload: TradeContextRequest):
 
 @router.post("/query")
 def query_memory(payload: MemoryQueryRequest):
-    query = MemoryQuery(query=payload.query, tags=payload.tags, memory_type=payload.memory_type)
-    results = memory_agent.recall(query)
+    results = memory_agent.query(
+        payload.query,
+        tags=payload.tags,
+        memory_type=payload.memory_type,
+    )
     return {"results": [record.to_dict() for record in results]}
 
 
 @router.get("/all")
 def get_all_memory():
-    records = memory_agent.all()
+    records = memory_agent.load_memory()
     return {"records": [record.to_dict() for record in records]}
 
 
 @router.post("/short-term/save")
 def save_short_term_memory(payload: ShortTermMemoryRequest):
-    record = add_short_term_memory(short_memory, payload.content, payload.tags)
+    record = memory_agent.save_short_term(payload.content, payload.tags)
     return {"saved_memory": record.to_dict()}
 
 
 @router.get("/short-term/recent")
 def recent_short_term_memory(limit: int = 10):
-    records = recall_recent_memories(short_memory, limit)
+    records = memory_agent.recent_short_term(limit)
     return {"recent_memories": [record.to_dict() for record in records]}
 
 
 @router.post("/market-insight")
 def query_market_insight_endpoint(payload: MemoryQueryRequest):
-    results = query_market_insight(memory_agent, query_value=payload.query, tags=payload.tags)
+    results = memory_agent.query_market_insight(payload.query, payload.tags)
     return {"market_insights": [record.to_dict() for record in results]}
