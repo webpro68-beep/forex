@@ -7,7 +7,7 @@ Memory OS
 
 Generate ✓
 Verify ✓
-Publish ✗
+Publish ✓
 
 ---
 
