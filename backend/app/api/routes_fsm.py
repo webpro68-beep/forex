@@ -13,6 +13,8 @@ from app.core.runtime import (
     save_robot_state,
     state_store,
 )
+from hooks.schemas import HookContext
+from app.core.runtime import evolution_agent
 from app.strategy.grid_math import calculate_grid
 
 router = APIRouter(prefix="/api/v1/fsm", tags=["fsm"])
@@ -24,6 +26,23 @@ def tick():
     state = get_or_create_robot_state()
     tick_data = market_agent.fetch_tick(state.symbol)
     independent_ok = market_agent.validate_independent_source(tick_data)
+
+    # Run before-signal hooks
+    try:
+        before_signal_results = evolution_agent.run_before_signal(HookContext(event="before_signal", payload={"state": state.model_dump(), "tick": tick_data.model_dump()}))
+        if any(not r.proceed for r in before_signal_results):
+            risk = risk_guard.evaluate(state, tick_data)
+            risk.allowed = False
+            risk.action = "PAUSE_SIGNAL"
+            for r in before_signal_results:
+                if not r.proceed:
+                    risk.reasons.extend(r.reasons)
+            state.fsm_state = fsm_brain.next_state(state, risk, has_cycle=None, surplus_active=False)
+            save_robot_state(state)
+            return {"state": state, "tick": tick_data, "grid": None, "risk": risk, "executed_orders": [], "cycle": None}
+    except Exception:
+        # Fail-safe: continue without hooks on error
+        pass
     risk = risk_guard.evaluate(state, tick_data)
     if not independent_ok:
         risk.allowed = False
@@ -39,18 +58,44 @@ def tick():
             cycle = hedge_engine.open_base_hedge(state, tick_data)
             state.current_cycle_id = cycle.cycle_id
             for order in cycle.buy_orders + cycle.sell_orders:
-                executed.append(execution_agent.execute(order))
+                # Run before-trade hooks; skip execution if any hook blocks
+                try:
+                    before_trade_results = evolution_agent.run_before_trade(HookContext(event="before_trade", payload={"order": order.model_dump(), "state": state.model_dump()}))
+                    if any(not r.proceed for r in before_trade_results):
+                        continue
+                except Exception:
+                    pass
+
+                opened = execution_agent.execute(order)
+                executed.append(opened)
+
+                try:
+                    evolution_agent.run_after_trade(HookContext(event="after_trade", payload={"order": opened.model_dump(), "state": state.model_dump()}))
+                except Exception:
+                    pass
             state_store.save_cycle(cycle)
         else:
             grid = calculate_grid(state.symbol, cycle.buy_orders[0].entry_price, tick_data.mid, settings.default_step_size, settings.default_x_level, settings.tick_size)
             surplus_orders = hedge_engine.evaluate_surplus(state, cycle, grid, tick_data)
             for order in surplus_orders:
+                try:
+                    before_trade_results = evolution_agent.run_before_trade(HookContext(event="before_trade", payload={"order": order.model_dump(), "state": state.model_dump()}))
+                    if any(not r.proceed for r in before_trade_results):
+                        continue
+                except Exception:
+                    pass
+
                 opened = execution_agent.execute(order)
                 executed.append(opened)
                 if opened.side == "BUY":
                     cycle.buy_orders.append(opened)
                 else:
                     cycle.sell_orders.append(opened)
+
+                try:
+                    evolution_agent.run_after_trade(HookContext(event="after_trade", payload={"order": opened.model_dump(), "state": state.model_dump()}))
+                except Exception:
+                    pass
             state_store.save_cycle(cycle)
 
     state.fsm_state = fsm_brain.next_state(state, risk, has_cycle=cycle is not None, surplus_active=bool(executed and cycle and cycle.surplus_side != "NONE"))

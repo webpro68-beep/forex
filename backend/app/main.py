@@ -17,6 +17,7 @@ from app.api.routes_genes import router as genes_router
 from app.api.routes_grid import router as grid_router
 from app.api.routes_guard import router as guard_router
 from app.api.routes_memory import router as memory_router
+from app.api.routes_hooks import router as hooks_router
 from app.api.routes_robot import router as robot_router
 from app.core.config import get_settings
 
@@ -37,6 +38,7 @@ app.include_router(guard_router)
 app.include_router(backtest_router)
 app.include_router(genes_router)
 app.include_router(memory_router)
+app.include_router(hooks_router)
 app.include_router(dashboard_router)
 
 
