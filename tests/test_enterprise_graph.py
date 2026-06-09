@@ -44,9 +44,18 @@ def test_graph_endpoints(tmp_path):
 
     graph = client.get("/api/v1/graph/dump").json()
     assert any(
-        e["src"] == "backend.app.guard.risk_guard" and e["dst"] == "skills.risk_management"
+        e["src"] == "backend.app.guard.risk_guard" and e["dst"] == "skills.risk_management" and e["label"] == "capability"
         for e in graph["edges"]
     )
+    assert any(
+        e["src"].startswith("skills.") and e["dst"].startswith("skills.") and e["label"] == "capability"
+        for e in graph["edges"]
+    )
+
+    r = client.get("/api/v1/graph/subgraph", params={"edge_type": "capability"})
+    assert r.status_code == 200
+    cap_graph = r.json()
+    assert all(e["label"] == "capability" for e in cap_graph["edges"])
 
     # save/load using a temp path
     temp_path = tmp_path / "enterprise_graph.json"

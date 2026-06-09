@@ -74,6 +74,10 @@ def load_graph(path: Optional[str] = Query(None)):
 
 
 @router.get("/subgraph")
-def subgraph(node: Optional[str] = Query(None), category: Optional[str] = Query(None)):
-    g = graph_agent.get_subgraph(node_id=node, category=category)
+def subgraph(
+    node: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    edge_type: Optional[str] = Query(None),
+):
+    g = graph_agent.get_subgraph(node_id=node, category=category, edge_type=edge_type)
     return g

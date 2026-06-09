@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Any
 from pathlib import Path
+import ast
 import json
 import re
 
@@ -79,11 +80,18 @@ class EnterpriseGraphManager:
                     continue
                 module_id = path.relative_to(base).with_suffix("").as_posix().replace("/", ".")
                 self.register_node(module_id, {"category": "agent", "source": str(path.relative_to(base))})
-                for imported in self._parse_imports(text):
+                for imported in self._parse_imports(text, module_id):
+                    label = self._classify_import(imported, text)
                     if imported.startswith("skills."):
                         skill_node = import_to_skill_node(imported)
                         self.register_node(skill_node, {"category": "skill"})
-                        self.add_edge(module_id, skill_node, label="depends_on")
+                        self.add_edge(module_id, skill_node, label=label)
+                    elif imported.startswith("app."):
+                        self.register_node(imported, {"category": "runtime"})
+                        self.add_edge(module_id, imported, label=label)
+                for data_node in self._extract_data_dependencies(text, base):
+                    self.register_node(data_node, {"category": "data"})
+                    self.add_edge(module_id, data_node, label="data")
 
         if skills_dir.exists():
             for path in skills_dir.rglob("*.py"):
@@ -93,43 +101,104 @@ class EnterpriseGraphManager:
                     continue
                 module_id = path.relative_to(base).with_suffix("").as_posix().replace("/", ".")
                 self.register_node(module_id, {"category": "skill", "source": str(path.relative_to(base))})
-                for imported in self._parse_imports(text):
+                for imported in self._parse_imports(text, module_id):
+                    label = self._classify_import(imported, text)
                     if imported.startswith("skills."):
                         imported_node = import_to_skill_node(imported)
                         self.register_node(imported_node, {"category": "skill"})
-                        self.add_edge(module_id, imported_node, label="depends_on")
+                        self.add_edge(module_id, imported_node, label=label)
+                    elif imported.startswith("app."):
+                        self.register_node(imported, {"category": "runtime"})
+                        self.add_edge(module_id, imported, label=label)
+                for data_node in self._extract_data_dependencies(text, base):
+                    self.register_node(data_node, {"category": "data"})
+                    self.add_edge(module_id, data_node, label="data")
 
     @staticmethod
-    def _parse_imports(source: str) -> List[str]:
-        pattern = re.compile(r"^(?:from|import)\s+([\w\.]+)", re.MULTILINE)
+    def _parse_imports(source: str, module_id: str | None = None) -> List[str]:
+        try:
+            tree = ast.parse(source)
+        except SyntaxError:
+            return []
         imports: List[str] = []
-        for match in pattern.finditer(source):
-            imports.append(match.group(1))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imports.append(alias.name)
+            elif isinstance(node, ast.ImportFrom):
+                module = node.module
+                if node.level and module_id:
+                    base_pkg = module_id.rsplit(".", 1)[0] if "." in module_id else module_id
+                    parents = base_pkg.split(".")
+                    if node.level > len(parents):
+                        resolved = None
+                    else:
+                        resolved_parts = parents[: len(parents) - node.level + 1]
+                        if module:
+                            resolved_parts += module.split(".")
+                        resolved = ".".join(resolved_parts)
+                    if resolved:
+                        imports.append(resolved)
+                elif module:
+                    imports.append(module)
         return imports
 
-    def get_subgraph(self, node_id: str | None = None, category: str | None = None) -> Dict[str, Any]:
-        """Return a subgraph filtered by node or category.
+    @staticmethod
+    def _classify_import(import_path: str, source: str | None = None) -> str:
+        if import_path.startswith("skills."):
+            return "capability"
+        if import_path.startswith("app."):
+            return "runtime"
+        if source and (".yaml" in source or ".json" in source or ".csv" in source):
+            return "data"
+        return "depends_on"
 
-        - If `node_id` provided: return node and its immediate neighbors (in/out edges).
+    @staticmethod
+    def _extract_data_dependencies(source: str, base: Path) -> List[str]:
+        nodes: List[str] = []
+        pattern = re.compile(r"[\'\"]([^\'\"]+\.(?:yaml|yml|json|csv))[\'\"]")
+        for match in pattern.finditer(source):
+            path_text = match.group(1)
+            if path_text.startswith("data/") or path_text.startswith("./data/") or path_text.startswith("../data/"):
+                normalized = Path(path_text).as_posix()
+                nodes.append(f"data:{normalized}")
+        return nodes
+
+    def get_subgraph(
+        self,
+        node_id: str | None = None,
+        category: str | None = None,
+        edge_type: str | None = None,
+    ) -> Dict[str, Any]:
+        """Return a subgraph filtered by node, category, or edge type.
+
+        - If `node_id` provided: return node and its immediate neighbors.
         - If `category` provided: return nodes whose meta.get('category') == category and edges between them.
+        - If `edge_type` provided: filter edges by label.
         - If neither provided: return full graph.
         """
+        def edge_match(e: dict[str, str]) -> bool:
+            if edge_type and e.get("label") != edge_type:
+                return False
+            return True
+
         if node_id:
-            nodes = {}
-            edges = []
+            nodes: Dict[str, Any] = {}
+            edges: List[Dict[str, str]] = []
             if node_id in self.nodes:
                 nodes[node_id] = self.nodes[node_id]
             for e in self.edges:
-                if e['src'] == node_id or e['dst'] == node_id:
+                if (e["src"] == node_id or e["dst"] == node_id) and edge_match(e):
                     edges.append(e)
-                    nodes.setdefault(e['src'], self.nodes.get(e['src'], {}))
-                    nodes.setdefault(e['dst'], self.nodes.get(e['dst'], {}))
+                    nodes.setdefault(e["src"], self.nodes.get(e["src"], {}))
+                    nodes.setdefault(e["dst"], self.nodes.get(e["dst"], {}))
             return {"nodes": nodes, "edges": edges}
 
         if category:
-            nodes = {nid: meta for nid, meta in self.nodes.items() if meta.get('category') == category}
+            nodes = {nid: meta for nid, meta in self.nodes.items() if meta.get("category") == category}
             node_keys = set(nodes.keys())
-            edges = [e for e in self.edges if e['src'] in node_keys and e['dst'] in node_keys]
+            edges = [e for e in self.edges if e["src"] in node_keys and e["dst"] in node_keys and edge_match(e)]
             return {"nodes": nodes, "edges": edges}
 
-        return self.get_graph()
+        edges = [e for e in self.edges if edge_match(e)]
+        return {"nodes": self.nodes, "edges": edges}
