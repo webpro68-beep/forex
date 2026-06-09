@@ -40,10 +40,23 @@ def dump_graph():
 
 
 @router.post("/populate")
-def populate_graph(skills_root: Optional[str] = Query("skills")):
+def populate_graph(
+    skills_root: Optional[str] = Query("skills"),
+    backend_root: Optional[str] = Query("backend/app"),
+    include_imports: Optional[bool] = Query(True),
+):
     graph_agent.clear()
     graph_agent.populate_from_skills(skills_root)
-    return {"ok": True, "nodes": len(graph_agent.nodes), "skills_root": skills_root}
+    if include_imports:
+        graph_agent.populate_from_imports(".", skills_root=skills_root, backend_root=backend_root)
+    return {
+        "ok": True,
+        "nodes": len(graph_agent.nodes),
+        "edges": len(graph_agent.edges),
+        "skills_root": skills_root,
+        "backend_root": backend_root,
+        "include_imports": include_imports,
+    }
 
 
 @router.post("/save")

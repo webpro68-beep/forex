@@ -34,12 +34,19 @@ def test_graph_endpoints(tmp_path):
     sub2 = r.json()
     assert "nodes" in sub2 and isinstance(sub2["nodes"], dict)
 
-    # populate graph from skill packages
+    # populate graph from skill packages and import dependencies
     r = client.post("/api/v1/graph/populate")
     assert r.status_code == 200
     pop = r.json()
     assert pop["ok"] is True
     assert "market_analysis" in client.get("/api/v1/graph/dump").json()["nodes"]
+    assert pop["edges"] > 0
+
+    graph = client.get("/api/v1/graph/dump").json()
+    assert any(
+        e["src"] == "backend.app.guard.risk_guard" and e["dst"] == "skills.risk_management"
+        for e in graph["edges"]
+    )
 
     # save/load using a temp path
     temp_path = tmp_path / "enterprise_graph.json"

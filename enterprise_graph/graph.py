@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Any
 from pathlib import Path
 import json
+import re
 
 
 @dataclass
@@ -58,6 +59,53 @@ class EnterpriseGraphManager:
                 if first_line:
                     meta["description"] = first_line.lstrip("# ")
             self.register_node(node_id, meta)
+
+    def populate_from_imports(self, base_path: str | Path, skills_root: str = "skills", backend_root: str = "backend/app") -> None:
+        base = Path(base_path)
+        skills_dir = base / skills_root
+        backend_dir = base / backend_root
+
+        def import_to_skill_node(import_path: str) -> str:
+            parts = import_path.split(".")
+            if len(parts) >= 2 and parts[0] == "skills":
+                return ".".join(parts[:2])
+            return import_path
+
+        if backend_dir.exists():
+            for path in backend_dir.rglob("*.py"):
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except Exception:
+                    continue
+                module_id = path.relative_to(base).with_suffix("").as_posix().replace("/", ".")
+                self.register_node(module_id, {"category": "agent", "source": str(path.relative_to(base))})
+                for imported in self._parse_imports(text):
+                    if imported.startswith("skills."):
+                        skill_node = import_to_skill_node(imported)
+                        self.register_node(skill_node, {"category": "skill"})
+                        self.add_edge(module_id, skill_node, label="depends_on")
+
+        if skills_dir.exists():
+            for path in skills_dir.rglob("*.py"):
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except Exception:
+                    continue
+                module_id = path.relative_to(base).with_suffix("").as_posix().replace("/", ".")
+                self.register_node(module_id, {"category": "skill", "source": str(path.relative_to(base))})
+                for imported in self._parse_imports(text):
+                    if imported.startswith("skills."):
+                        imported_node = import_to_skill_node(imported)
+                        self.register_node(imported_node, {"category": "skill"})
+                        self.add_edge(module_id, imported_node, label="depends_on")
+
+    @staticmethod
+    def _parse_imports(source: str) -> List[str]:
+        pattern = re.compile(r"^(?:from|import)\s+([\w\.]+)", re.MULTILINE)
+        imports: List[str] = []
+        for match in pattern.finditer(source):
+            imports.append(match.group(1))
+        return imports
 
     def get_subgraph(self, node_id: str | None = None, category: str | None = None) -> Dict[str, Any]:
         """Return a subgraph filtered by node or category.
