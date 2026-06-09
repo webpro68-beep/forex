@@ -19,7 +19,7 @@ from app.api.routes_guard import router as guard_router
 from app.api.routes_memory import router as memory_router
 from app.api.routes_hooks import router as hooks_router
 from app.api.routes_identity import router as identity_router
-from app.api.routes_graph import router as graph_router
+from app.api.routes_graph2 import router as graph_router
 from app.api.routes_robot import router as robot_router
 from app.core.config import get_settings
 

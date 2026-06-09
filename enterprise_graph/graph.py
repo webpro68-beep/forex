@@ -38,3 +38,30 @@ class EnterpriseGraphManager:
         data = json.loads(p.read_text(encoding="utf-8"))
         self.nodes = data.get("nodes", {})
         self.edges = data.get("edges", [])
+
+    def get_subgraph(self, node_id: str | None = None, category: str | None = None) -> Dict[str, Any]:
+        """Return a subgraph filtered by node or category.
+
+        - If `node_id` provided: return node and its immediate neighbors (in/out edges).
+        - If `category` provided: return nodes whose meta.get('category') == category and edges between them.
+        - If neither provided: return full graph.
+        """
+        if node_id:
+            nodes = {}
+            edges = []
+            if node_id in self.nodes:
+                nodes[node_id] = self.nodes[node_id]
+            for e in self.edges:
+                if e['src'] == node_id or e['dst'] == node_id:
+                    edges.append(e)
+                    nodes.setdefault(e['src'], self.nodes.get(e['src'], {}))
+                    nodes.setdefault(e['dst'], self.nodes.get(e['dst'], {}))
+            return {"nodes": nodes, "edges": edges}
+
+        if category:
+            nodes = {nid: meta for nid, meta in self.nodes.items() if meta.get('category') == category}
+            node_keys = set(nodes.keys())
+            edges = [e for e in self.edges if e['src'] in node_keys and e['dst'] in node_keys]
+            return {"nodes": nodes, "edges": edges}
+
+        return self.get_graph()
