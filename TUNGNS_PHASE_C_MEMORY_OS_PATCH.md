@@ -2,13 +2,8 @@
 
 ## Status
 Generate ✓
-Verify ☐
-Publish ☐
-
-## Status
-Generate ✓
 Verify ✓
-Publish ☐
+Publish ✓
 
 ## Patch 1: Memory OS skill package
 - Create `skills/memory` with durable `long_term` persistence and ephemeral `short_term` store.

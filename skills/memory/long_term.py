@@ -40,7 +40,7 @@ def query_memory(path: str, query: MemoryQuery) -> list[MemoryRecord]:
     tags = [tag.lower() for tag in query.tags]
 
     def matches(record: MemoryRecord) -> bool:
-
+        serialized = json.dumps(record.content, ensure_ascii=False).lower()
         searchable = f"{serialized} {' '.join(record.tags).lower()}"
         return all(term in searchable for term in query_terms) and all(tag in searchable for tag in tags)
 
