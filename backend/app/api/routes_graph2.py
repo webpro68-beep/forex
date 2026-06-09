@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Response
 from typing import Optional
 
 from app.core.config import get_settings
@@ -81,3 +81,15 @@ def subgraph(
 ):
     g = graph_agent.get_subgraph(node_id=node, category=category, edge_type=edge_type)
     return g
+
+
+@router.get("/export/dot")
+def export_dot():
+    content = graph_agent.to_dot()
+    return Response(content=content, media_type="text/plain")
+
+
+@router.get("/export/mermaid")
+def export_mermaid():
+    content = graph_agent.to_mermaid()
+    return Response(content=content, media_type="text/plain")

@@ -70,3 +70,11 @@ def test_graph_endpoints(tmp_path):
     assert r.status_code == 200
     sdata = r.json()
     assert "nodes" in sdata and "market_analysis" in sdata["nodes"]
+
+    r = client.get("/api/v1/graph/export/dot")
+    assert r.status_code == 200
+    assert "digraph EnterpriseGraph" in r.text
+
+    r = client.get("/api/v1/graph/export/mermaid")
+    assert r.status_code == 200
+    assert "flowchart LR" in r.text

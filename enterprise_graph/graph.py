@@ -202,3 +202,55 @@ class EnterpriseGraphManager:
 
         edges = [e for e in self.edges if edge_match(e)]
         return {"nodes": self.nodes, "edges": edges}
+
+    def to_dot(self) -> str:
+        lines: List[str] = ["digraph EnterpriseGraph {", "  rankdir=LR;"]
+        for nid, meta in self.nodes.items():
+            label = meta.get("description", nid)
+            category = meta.get("category", "node")
+            shape = "box"
+            if category == "skill":
+                shape = "ellipse"
+            elif category == "agent":
+                shape = "box"
+            elif category == "data":
+                shape = "cylinder"
+            elif category == "runtime":
+                shape = "diamond"
+            lines.append(f'  "{nid}" [label="{label}", shape={shape}];')
+        for edge in self.edges:
+            label = edge.get("label", "")
+            if label:
+                lines.append(f'  "{edge["src"]}" -> "{edge["dst"]}" [label="{label}"];')
+            else:
+                lines.append(f'  "{edge["src"]}" -> "{edge["dst"]}";')
+        lines.append("}")
+        return "\n".join(lines)
+
+    def to_mermaid(self) -> str:
+        lines: List[str] = ["flowchart LR"]
+        for nid, meta in self.nodes.items():
+            category = meta.get("category", "node")
+            if category == "skill":
+                lines.append(f'  {self._mermaid_id(nid)}["{nid}"]')
+            elif category == "agent":
+                lines.append(f'  {self._mermaid_id(nid)}{{"{nid}"}}')
+            elif category == "data":
+                lines.append(f'  {self._mermaid_id(nid)}(("{nid}"))')
+            elif category == "runtime":
+                lines.append(f'  {self._mermaid_id(nid)}(("{nid}"))')
+            else:
+                lines.append(f'  {self._mermaid_id(nid)}("{nid}")')
+        for edge in self.edges:
+            src = self._mermaid_id(edge["src"])
+            dst = self._mermaid_id(edge["dst"])
+            label = edge.get("label", "")
+            if label:
+                lines.append(f'  {src} -->|"{label}"| {dst}')
+            else:
+                lines.append(f'  {src} --> {dst}')
+        return "\n".join(lines)
+
+    @staticmethod
+    def _mermaid_id(node_id: str) -> str:
+        return re.sub(r"[^0-9A-Za-z_]+", "_", node_id)
